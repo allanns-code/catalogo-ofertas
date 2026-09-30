@@ -37,6 +37,9 @@
 **/.fuse_hidden*
 **/.nfs*
 
+# App data
+**/data/
+
 # Node.js
 **/node_modules/
 **/npm-debug.log*

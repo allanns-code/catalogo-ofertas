@@ -1,0 +1,22 @@
+{
+  "name": "catalogo-ofertas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gerador de catalogo de ofertas com contas, persistencia e assinatura Stripe",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
+    "nodemailer": "^6.9.16",
+    "stripe": "^17.7.0"
+  }
+}
