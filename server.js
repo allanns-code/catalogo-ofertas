@@ -127,7 +127,7 @@ function seedAdmin() {
       new Date().toISOString()
     );
   } else {
-    db.prepare("UPDATE users SET role='admin', plan='pro' WHERE id=?").run(existingAdmin.id);
+    db.prepare("UPDATE users SET role='admin', plan='pro', pass=? WHERE id=?").run(hashPass(ADMIN_PASSWORD), existingAdmin.id);
   }
 }
 
