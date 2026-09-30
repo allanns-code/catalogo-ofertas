@@ -123,7 +123,7 @@ Depois de salvar as env vars, faca um Manual Deploy no Render.
 
 ## Disco e dados
 
-O banco e SQLite em `data/app.db`.
+O banco e SQLite (via `sql.js`, sem compilacao nativa) em `data/app.db`.
 
 No plano free do Render o disco e efemero: restart pode apagar contas e catalogos. Para producao de verdade, use disco persistente no Render ou troque o SQLite por Postgres.
 

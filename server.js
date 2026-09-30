@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
-const Database = require("better-sqlite3");
+const initSqlJs = require("sql.js");
 const nodemailer = require("nodemailer");
 
 const PORT = Number(process.env.PORT || 3000);
@@ -15,10 +15,49 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 const APP_URL = process.env.APP_URL || "";
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 fs.mkdirSync(DATA_DIR, { recursive: true });
+const DB_FILE = path.join(DATA_DIR, "app.db");
+let db;
 
-const db = new Database(path.join(DATA_DIR, "app.db"));
-db.pragma("journal_mode = WAL");
-db.exec(`
+function wrapDb(raw) {
+  function persist() {
+    fs.writeFileSync(DB_FILE, Buffer.from(raw.export()));
+  }
+  return {
+    persist,
+    exec(sql) {
+      raw.exec(sql);
+      persist();
+    },
+    prepare(sql) {
+      return {
+        get(...params) {
+          const stmt = raw.prepare(sql);
+          if (params.length) stmt.bind(params);
+          const row = stmt.step() ? stmt.getAsObject() : undefined;
+          stmt.free();
+          return row;
+        },
+        all(...params) {
+          const stmt = raw.prepare(sql);
+          if (params.length) stmt.bind(params);
+          const rows = [];
+          while (stmt.step()) rows.push(stmt.getAsObject());
+          stmt.free();
+          return rows;
+        },
+        run(...params) {
+          raw.run(sql, params);
+          persist();
+          const r = raw.exec("SELECT last_insert_rowid() AS id");
+          const lastInsertRowid = r.length && r[0].values.length ? r[0].values[0][0] : 0;
+          return { lastInsertRowid };
+        }
+      };
+    }
+  };
+}
+
+const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user TEXT NOT NULL UNIQUE,
@@ -51,7 +90,7 @@ CREATE TABLE IF NOT EXISTS catalogs (
   updated_at TEXT,
   FOREIGN KEY(user_id) REFERENCES users(id)
 );
-`);
+`;
 
 function hashPass(pass) {
   return bcrypt.hashSync(String(pass), 10);
@@ -76,18 +115,28 @@ function publicUser(row) {
   };
 }
 
-const existingAdmin = db.prepare("SELECT id FROM users WHERE user = ? OR email = ?").get(ADMIN_USER, ADMIN_EMAIL);
-if (!existingAdmin) {
-  db.prepare("INSERT INTO users (user,email,pass,role,plan,created_at) VALUES (?,?,?,?,?,?)").run(
-    ADMIN_USER,
-    ADMIN_EMAIL,
-    hashPass(ADMIN_PASSWORD),
-    "admin",
-    "pro",
-    new Date().toISOString()
-  );
-} else {
-  db.prepare("UPDATE users SET role='admin', plan='pro' WHERE id=?").run(existingAdmin.id);
+function seedAdmin() {
+  const existingAdmin = db.prepare("SELECT id FROM users WHERE user = ? OR email = ?").get(ADMIN_USER, ADMIN_EMAIL);
+  if (!existingAdmin) {
+    db.prepare("INSERT INTO users (user,email,pass,role,plan,created_at) VALUES (?,?,?,?,?,?)").run(
+      ADMIN_USER,
+      ADMIN_EMAIL,
+      hashPass(ADMIN_PASSWORD),
+      "admin",
+      "pro",
+      new Date().toISOString()
+    );
+  } else {
+    db.prepare("UPDATE users SET role='admin', plan='pro' WHERE id=?").run(existingAdmin.id);
+  }
+}
+
+async function initDb() {
+  const SQL = await initSqlJs();
+  const raw = fs.existsSync(DB_FILE) ? new SQL.Database(fs.readFileSync(DB_FILE)) : new SQL.Database();
+  db = wrapDb(raw);
+  db.exec(SCHEMA);
+  seedAdmin();
 }
 
 function mailer() {
@@ -347,6 +396,11 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("Listening on port " + PORT);
+initDb().then(() => {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log("Listening on port " + PORT);
+  });
+}).catch(err => {
+  console.error(err);
+  process.exit(1);
 });

@@ -13,10 +13,10 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^11.8.1",
     "cookie-parser": "^1.4.7",
     "express": "^4.21.2",
     "nodemailer": "^6.9.16",
+    "sql.js": "^1.12.0",
     "stripe": "^17.7.0"
   }
 }
