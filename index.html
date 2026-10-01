@@ -762,8 +762,9 @@ function parsePorSeparador(linha,sep){
   if(partes.length<2)return null;
   if(partes.length===2){
     if(!parecePreco(partes[1])&&!extrairPrecoDoFim(partes[1]))return null;
-    if(!descValida(partes[0],"000"))return null;
-    return{codigo:"000",descricao:partes[0],preco:partes[1]};
+    const {codigo,descricao}=splitCodDesc(partes[0]);
+    if(!descValida(descricao,codigo))return null;
+    return{codigo,descricao,preco:partes[1]};
   }
   const preco=partes[partes.length-1];
   const codigo=partes[0];
