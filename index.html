@@ -534,6 +534,7 @@ async function carregarCatalogo(){
   if(data.layout&&LAYOUTS[data.layout])aplicarLayout(data.layout,false);
 }
 async function entrar(user){
+  if(!user||!user.user)throw new Error("Conta criada, mas a sessao nao abriu. Tente entrar.");
   mostrarApp(user);
   try{await carregarCatalogo()}catch(e){st.textContent=e.message}
   if(!layoutAtual)abrirLayoutModal();
@@ -723,12 +724,12 @@ function splitCodDesc(s){
   return{codigo:"000",descricao:s};
 }
 function descValida(descricao,codigo){
-  const d=String(descricao||"").replace(/\s+/g," ").trim();
-  if(d.length<8)return false;
+  const d=String(descricao||"").replace(/\s+/g," ").trim().replace(/^[,;|.\-–—\s]+/,"").replace(/[,;|.\-–—\s]+$/,"");
+  if(d.length<4)return false;
   if(SKIP_DESC.test(d)||FRAG_DESC.test(d)||SKIP_LINHA.test(d))return false;
   if(!/[A-Za-zÁ-ú]{3,}/.test(d))return false;
   const words=d.split(/\s+/).filter(w=>/[A-Za-zÁ-ú]{2,}/.test(w));
-  if(words.length<2)return false;
+  if(!words.length)return false;
   if(codigoFinal(codigo)==="000"&&/^(ao|branca?o|preto|com|de|da|do|das|dos|para|em|c\/\d+|prom|un|cx)\b/i.test(d))return false;
   return true;
 }
@@ -775,7 +776,8 @@ function parseUmaLinha(linha){
   if(!linha||SKIP_LINHA.test(linha))return null;
   const tab=parseLinhaTabela(linha);
   if(tab)return tab;
-  if(linha.includes(";"))return parsePorSeparador(linha,";");
+  if(linha.includes(";")){const p=parsePorSeparador(linha,";");if(p)return p}
+  if(linha.includes("\t")){const p=parsePorSeparador(linha,"\t");if(p)return p}
   if(/\s+[-–—]\s+/.test(linha)){
     const viaTraco=parsePorSeparador(linha,/\s+[-–—]\s+/);
     if(viaTraco)return viaTraco;
@@ -880,18 +882,13 @@ function dedupBrutos(brutos){
 }
 function parseLinhas(texto){
   const brutos=[];
+  for(const linha of String(texto).split(/\n/)){
+    const p=parseUmaLinha(linha);
+    if(p)brutos.push(p);
+  }
   if(ehTabela(texto)){
     brutos.push(...parseCamposEmpilhados(texto));
-    for(const linha of String(texto).split(/\n/)){
-      const p=parseLinhaTabela(linha);
-      if(p)brutos.push(p);
-    }
-    if(brutos.length<5)brutos.push(...parseTextoCorrido(texto));
-  }else{
-    for(const linha of String(texto).split(/\n/)){
-      const p=parseUmaLinha(linha);
-      if(p)brutos.push(p);
-    }
+    brutos.push(...parseTextoCorrido(texto));
   }
   const novos=[];
   for(const p of dedupBrutos(brutos)){

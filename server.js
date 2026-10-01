@@ -47,9 +47,9 @@ function wrapDb(raw) {
         },
         run(...params) {
           raw.run(sql, params);
-          persist();
           const r = raw.exec("SELECT last_insert_rowid() AS id");
           const lastInsertRowid = r.length && r[0].values.length ? r[0].values[0][0] : 0;
+          persist();
           return { lastInsertRowid };
         }
       };
