@@ -9,8 +9,11 @@ O cliente entra, monta o catalogo, escolhe layout e imprime. Cada conta guarda o
 - Login, cadastro e alteracao de senha
 - Recuperacao de senha por e-mail (precisa de SMTP)
 - Admin cria e remove usuarios
-- Catalogo salvo por conta (titulo, periodo, layout e produtos)
+- Varios catalogos por conta (novo, duplicar, excluir)
+- Catalogo salvo (titulo, periodo, layout, produtos e imagens)
 - Importacao por texto, PDF e imagem
+- Download do PDF final
+- App instalavel no celular (PWA)
 - Checkout Stripe do plano Pro
 
 ## Rodar local
@@ -123,9 +126,26 @@ Depois de salvar as env vars, faca um Manual Deploy no Render.
 
 ## Disco e dados
 
-O banco e SQLite (via `sql.js`, sem compilacao nativa) em `data/app.db`.
+Por padrao o banco e SQLite em `data/app.db` e as imagens em `data/uploads`.
 
-No plano free do Render o disco e efemero: restart pode apagar contas e catalogos. Para producao de verdade, use disco persistente no Render ou troque o SQLite por Postgres.
+No plano free do Render esse disco some quando o servico reinicia. Para os dados nao sumirem:
+
+**Opcao A — Postgres (recomendado)**
+
+1. No Render: New + PostgreSQL
+2. Copie a Internal Database URL
+3. No Web Service, crie `DATABASE_URL` com esse valor
+4. Save e faca Manual Deploy
+
+**Opcao B — disco persistente**
+
+No Web Service > Disks, monte um disco em `/var/data` e defina `DATA_DIR=/var/data`.
+
+Sem uma dessas opcoes, contas, catalogos e imagens podem sumir no restart.
+
+## SMTP (esqueci a senha)
+
+Sem SMTP o app avisa na tela e o admin pode redefinir a senha na aba Admin (botao Senha).
 
 ## Como testar depois do deploy
 

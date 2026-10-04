@@ -5,6 +5,10 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm start
+    disk:
+      name: catalogo-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: SESSION_SECRET
         generateValue: true
@@ -16,6 +20,8 @@ services:
         sync: false
       - key: APP_URL
         sync: false
+      - key: DATA_DIR
+        value: /var/data
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET

@@ -15,6 +15,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root{--v:#0a7e3d;--a:#1a3d66}
 *{box-sizing:border-box}
@@ -70,8 +72,28 @@ body{margin:0;background:#e9edf0;font-family:Arial,sans-serif;color:#1d2a33}
 .rodape{background:#ebf0f3;padding:3mm 8mm;display:flex;justify-content:space-between;font-size:9px;color:#5a6b77;border-top:1px solid #d4dde3}
 .vz{text-align:center;padding:35mm 16mm;color:#6b7c88;border:2px dashed #c5d3dc;grid-column:1/-1}
 .vz strong{display:block;color:var(--a);font-size:20px;margin-bottom:6px}
-@media(max-width:840px){.pnl{margin:8px;border-radius:10px}.cat{width:100%;min-height:auto;border-radius:0}.gr{grid-template-columns:repeat(2,1fr);padding:10px;gap:8px}.img-a{height:150px}.topo{padding:25px 15px 10px}.topo h2{font-size:32px}}
-@media(max-width:500px){.gr{grid-template-columns:1fr}}
+.docs{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+.docs select{height:38px;border:1px solid #c2d1db;border-radius:8px;min-width:180px;padding:0 10px;font-size:14px}
+.fab{display:none}
+@media(max-width:840px){
+.pnl{margin:8px;border-radius:10px}
+.cat{width:100%;min-height:auto;border-radius:0}
+.gr{grid-template-columns:repeat(2,1fr);padding:10px;gap:8px}
+.img-a{height:150px}
+.topo{padding:25px 15px 10px}
+.topo h2{font-size:32px}
+.topbar{padding:10px 10px 8px;flex-wrap:wrap;gap:8px}
+.topbar .nav{flex-wrap:wrap;width:100%;justify-content:flex-start}
+.topbar .tab{padding:10px 12px;font-size:13px;min-height:40px}
+.bt{min-height:44px;font-size:15px;padding:12px 16px}
+.cp{min-height:44px;font-size:16px;min-width:0;flex:1}
+.tx{height:160px;font-size:16px}
+#add{position:sticky;bottom:12px;width:100%;z-index:12;box-shadow:0 8px 20px rgba(10,94,36,.25)}
+.login .box{padding:22px 16px}
+.login input{height:46px;font-size:16px}
+.edit-mode .ed,.edit-mode .ex{font-size:12px;padding:8px 10px}
+}
+@media(max-width:500px){.gr{grid-template-columns:1fr}.topbar .brand{width:100%}.docs select{width:100%}}
 .topbar{display:none;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#0b7a31,#0a5e24);color:#fff;padding:10px 18px;position:sticky;top:0;z-index:20}
 .topbar .brand{font-weight:800;letter-spacing:.5px}
 .topbar .nav{display:flex;align-items:center;gap:8px}
@@ -120,7 +142,7 @@ body{margin:0;background:#e9edf0;font-family:Arial,sans-serif;color:#1d2a33}
 @media print{
 @page{size:A4;margin:0}
 body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.pnl,.ed,.ex,.nt,.topbar,.admin-pnl,.conta-pnl,.login,.lay-modal{display:none!important}
+.pnl,.ed,.ex,.nt,.topbar,.admin-pnl,.conta-pnl,.login,.lay-modal,.docs{display:none!important}
 .cat{width:210mm;min-height:297mm;margin:0;box-shadow:none}
 .gr{grid-template-columns:repeat(3,1fr);gap:4mm}
 .img-a{height:42mm}
@@ -159,7 +181,7 @@ body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   </form>
   <form class="box" id="forgotForm" hidden>
     <h1>Esqueci a senha</h1>
-    <p>Informe o e-mail cadastrado. Enviaremos um link para renovar a senha.</p>
+    <p id="forgotHint">Informe o e-mail cadastrado. Enviaremos um link para renovar a senha.</p>
     <label for="fe">E-mail</label>
     <input id="fe" type="email" autocomplete="email" required>
     <div class="err" id="fer"></div>
@@ -194,6 +216,12 @@ body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 <section class="pnl">
 <h1>Gerador de Catálogo de Ofertas</h1>
 <p>Digite os produtos, ou suba um PDF/imagem da tabela. O app usa o preço UNIT e ignora EMBAL e MASTER. Sem código, grava 000.</p>
+<div class="docs">
+<select id="docSel"></select>
+<button id="docNew" class="bt a" type="button">Novo</button>
+<button id="docDup" class="bt a" type="button">Duplicar</button>
+<button id="docDel" class="bt" type="button">Excluir</button>
+</div>
 <div class="ctrl">
 <input id="tit" class="cp" value="OFERTAS">
 <input id="per" class="cp" placeholder="Ex.: 06 a 12 de setembro">
@@ -278,7 +306,7 @@ body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 </section>
 <script>
 const $=s=>document.querySelector(s),gr=$("#gr"),st=$("#st"),bus=$("#bus"),finalBtn=$("#final"),addBtn=$("#add"),inp=$("#inp"),upz=$("#upz"),arq=$("#arq");
-let currentUser=null,billingReady=false,saveTimer=0;
+let currentUser=null,billingReady=false,mailReady=false,saveTimer=0,currentDocId=0,docsCache=[];
 function emailOk(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||"").trim())}
 function normEmail(v){return String(v||"").trim().toLowerCase()}
 async function api(path,opts){
@@ -294,8 +322,9 @@ async function renderUsers(){
   try{
     const data=await api("/api/users");
     $("#ulist").innerHTML=(data.users||[]).map(u=>{
-      const del=u.role==="admin"?"":'<button class="del" type="button" onclick="excluirUser('+u.id+')">Excluir</button>';
-      return "<tr><td>"+u.user+"</td><td>"+(u.email||"-")+"</td><td>"+(u.role==="admin"?"Admin":u.plan||"user")+"</td><td>"+del+"</td></tr>";
+      const reset='<button class="bt a" type="button" onclick="resetarUser('+u.id+',\''+String(u.user).replace(/'/g,"")+"')\">Senha</button>";
+      const del=u.role==="admin"?"":' <button class="del" type="button" onclick="excluirUser('+u.id+')">Excluir</button>';
+      return "<tr><td>"+u.user+"</td><td>"+(u.email||"-")+"</td><td>"+(u.role==="admin"?"Admin":u.plan||"user")+"</td><td>"+reset+del+"</td></tr>";
     }).join("");
   }catch(e){$("#admSt").textContent=e.message}
 }
@@ -306,13 +335,21 @@ window.excluirUser=async function(id){
     renderUsers();
   }catch(e){$("#admSt").textContent=e.message}
 };
+window.resetarUser=async function(id,nome){
+  const nova=prompt("Nova senha para "+nome+":");
+  if(!nova)return;
+  try{
+    await api("/api/users/"+id+"/password",{method:"POST",body:JSON.stringify({nova})});
+    $("#admSt").textContent="Senha de "+nome+" redefinida.";
+  }catch(e){$("#admSt").textContent=e.message}
+};
 const LAYOUTS={
   semana:{cls:"lay-semana",titulo:"OFERTAS DA SEMANA"},
   food:{cls:"lay-food",titulo:"OFERTAS FOOD SERVICE"},
   pani:{cls:"lay-pani",titulo:"#SEXTA DA PANIFICACAO"}
 };
 let layoutAtual="";
-function aplicarLayout(id,forcarTitulo){
+function aplicarLayout(id,forcarTitulo,semSalvar){
   const lay=LAYOUTS[id];
   if(!lay)return;
   layoutAtual=id;
@@ -325,7 +362,7 @@ function aplicarLayout(id,forcarTitulo){
     $("#titS").textContent=lay.titulo;
   }
   rdr();
-  if(typeof agendarSalvar==="function")agendarSalvar();
+  if(!semSalvar&&typeof agendarSalvar==="function")agendarSalvar();
 }
 function abrirLayoutModal(){
   $("#layModal").classList.add("on");
@@ -473,7 +510,7 @@ $("#payBtn").addEventListener("click",async()=>{
     if(data.url)location.href=data.url;
   }catch(err){$("#contaSt").textContent=err.message}
 });
-function showForgot(){
+async function showForgot(){
   $("#loginForm").hidden=true;
   $("#regForm").hidden=true;
   $("#resetForm").hidden=true;
@@ -481,6 +518,10 @@ function showForgot(){
   $("#fer").textContent="";
   $("#fok").textContent="";
   $("#fe").value="";
+  try{const s=await api("/api/status");mailReady=!!s.mailReady}catch(e){}
+  $("#forgotHint").textContent=mailReady
+    ?"Informe o e-mail cadastrado. Enviaremos um link para renovar a senha."
+    :"O envio de e-mail ainda nao foi configurado. Peca ao administrador para redefinir sua senha.";
 }
 $("#goReset").addEventListener("click",showForgot);
 $("#backLogin1").addEventListener("click",mostrarLoginBox);
@@ -510,40 +551,75 @@ $("#resetForm").addEventListener("submit",async e=>{
   }catch(err){$("#rer").textContent=err.message}
 });
 function snapshotCatalogo(){
+  const sel=$("#docSel");
+  const name=sel&&sel.selectedOptions[0]?sel.selectedOptions[0].textContent:($("#tit").value.trim()||"Catalogo");
   return{
+    name,
     title:$("#tit").value.trim()||"OFERTAS",
     period:$("#per").value.trim(),
     layout:layoutAtual||"",
     products:prods.map(p=>({
       id:p.id,codigo:p.codigo,descricao:p.descricao,embalagem:p.embalagem||"",
-      preco:p.preco,imagem:p.imagem&&String(p.imagem).startsWith("http")?p.imagem:"",
+      preco:p.preco,imagem:p.imagem&&(String(p.imagem).startsWith("http")||String(p.imagem).startsWith("/uploads/"))?p.imagem:"",
       estado:p.estado||"aguardando",observacao:p.observacao||""
     }))
   };
 }
-function agendarSalvar(){
-  if(!currentUser)return;
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>{
-    api("/api/catalog",{method:"PUT",body:JSON.stringify(snapshotCatalogo())}).catch(()=>{});
-  },600);
+function renderDocs(){
+  const sel=$("#docSel");
+  sel.innerHTML=docsCache.map(d=>'<option value="'+d.id+'">'+es(d.name||d.title||"Catalogo")+"</option>").join("");
+  if(currentDocId)sel.value=String(currentDocId);
 }
-async function carregarCatalogo(){
-  const data=await api("/api/catalog");
+async function listarDocs(){
+  const data=await api("/api/catalogs");
+  docsCache=data.catalogs||[];
+  if(!docsCache.length){
+    const created=await api("/api/catalogs",{method:"POST",body:JSON.stringify({name:"Meu catalogo",title:"OFERTAS"})});
+    docsCache=[{id:created.id,name:created.name,title:created.title}];
+    currentDocId=created.id;
+  }
+  if(!currentDocId||!docsCache.some(d=>Number(d.id)===Number(currentDocId)))currentDocId=Number(docsCache[0].id);
+  renderDocs();
+}
+function aplicarDoc(data){
+  currentDocId=data.id;
   $("#tit").value=data.title||"OFERTAS";
   $("#per").value=data.period||"";
   $("#titS").textContent=$("#tit").value;
   $("#perS").textContent=$("#per").value;
   prods=Array.isArray(data.products)?data.products:[];
   idCounter=prods.reduce((m,p)=>Math.max(m,Number(p.id)||0),0);
-  if(prods.length){bus.disabled=0;finalBtn.disabled=0}
-  rdr();
-  if(data.layout&&LAYOUTS[data.layout])aplicarLayout(data.layout,false);
+  bus.disabled=prods.length?0:1;
+  finalBtn.disabled=prods.length?0:1;
+  layoutAtual="";
+  const catEl=$("#cat");
+  catEl.classList.remove("lay-semana","lay-food","lay-pani");
+  if(data.layout&&LAYOUTS[data.layout])aplicarLayout(data.layout,false,true);
+  else rdr();
+}
+function agendarSalvar(){
+  if(!currentUser||!currentDocId)return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    api("/api/catalogs/"+currentDocId,{method:"PUT",body:JSON.stringify(snapshotCatalogo())}).catch(()=>{});
+  },600);
+}
+async function carregarCatalogo(id){
+  if(id)currentDocId=id;
+  if(!currentDocId){
+    await listarDocs();
+  }
+  const data=await api("/api/catalogs/"+currentDocId);
+  aplicarDoc(data);
+  renderDocs();
 }
 async function entrar(user){
   if(!user||!user.user)throw new Error("Conta criada, mas a sessao nao abriu. Tente entrar.");
   mostrarApp(user);
-  try{await carregarCatalogo()}catch(e){st.textContent=e.message}
+  try{
+    await listarDocs();
+    await carregarCatalogo(currentDocId);
+  }catch(e){st.textContent=e.message}
   if(!layoutAtual)abrirLayoutModal();
 }
 async function boot(){
@@ -560,6 +636,7 @@ async function boot(){
   try{
     const data=await api("/api/me");
     billingReady=!!data.billingReady;
+    mailReady=!!data.mailReady;
     await entrar(data.user);
     const q=new URLSearchParams(location.search);
     if(q.get("paid")==="1"){$("#contaSt").textContent="Pagamento confirmado. Atualize se o plano ainda nao mudou."}
@@ -693,10 +770,17 @@ window.ai=async id=>{
     inputImagem.onchange=async()=>{
       const f=inputImagem.files[0];
       if(!f)return;
-      const url=await lerImagemLocal(f);
-      p.imagem=url;
+      const dataUrl=await lerImagemLocal(f);
+      st.textContent="Enviando imagem...";
+      try{
+        const up=await api("/api/upload",{method:"POST",body:JSON.stringify({image:dataUrl})});
+        p.imagem=up.url;
+        st.textContent="Imagem salva.";
+      }catch(e){
+        p.imagem=dataUrl;
+        st.textContent="Imagem no aparelho, mas nao ficou salva no servidor: "+e.message;
+      }
       p.estado="encontrada";
-      st.textContent="Imagem local carregada.";
       rdr();
       agendarSalvar();
       inputImagem.value="";
@@ -1085,14 +1169,83 @@ $("#atu").addEventListener("click",()=>{
   $("#perS").textContent=$("#per").value.trim();
   agendarSalvar();
 });
+$("#docSel").addEventListener("change",async()=>{
+  if(currentDocId){
+    try{await api("/api/catalogs/"+currentDocId,{method:"PUT",body:JSON.stringify(snapshotCatalogo())})}catch(e){}
+  }
+  await carregarCatalogo(Number($("#docSel").value));
+});
+$("#docNew").addEventListener("click",async()=>{
+  const name=prompt("Nome do catalogo:","Novo catalogo");
+  if(!name)return;
+  if(currentDocId){try{await api("/api/catalogs/"+currentDocId,{method:"PUT",body:JSON.stringify(snapshotCatalogo())})}catch(e){}}
+  try{
+    const created=await api("/api/catalogs",{method:"POST",body:JSON.stringify({name,title:"OFERTAS",layout:layoutAtual||""})});
+    await listarDocs();
+    await carregarCatalogo(created.id);
+    abrirLayoutModal();
+  }catch(e){st.textContent=e.message}
+});
+$("#docDup").addEventListener("click",async()=>{
+  if(!currentDocId)return;
+  try{
+    await api("/api/catalogs/"+currentDocId,{method:"PUT",body:JSON.stringify(snapshotCatalogo())});
+    const created=await api("/api/catalogs/"+currentDocId+"/duplicate",{method:"POST",body:"{}"});
+    await listarDocs();
+    await carregarCatalogo(created.id);
+  }catch(e){st.textContent=e.message}
+});
+$("#docDel").addEventListener("click",async()=>{
+  if(!currentDocId)return;
+  if(!confirm("Excluir este catalogo?"))return;
+  try{
+    await api("/api/catalogs/"+currentDocId,{method:"DELETE"});
+    currentDocId=0;
+    await listarDocs();
+    await carregarCatalogo(currentDocId);
+  }catch(e){st.textContent=e.message}
+});
 bus.addEventListener("click",bt);
-finalBtn.addEventListener("click",()=>{
-  editando=false;
-  rdr();
+async function gerarPdf(){
+  if(!prods.length){st.textContent="Adicione produtos antes de gerar o PDF.";return}
   $("#titS").textContent=$("#tit").value.trim()||"OFERTAS";
   $("#perS").textContent=$("#per").value.trim();
-  setTimeout(()=>window.print(),200);
-});
+  const prev=editando;
+  editando=false;
+  rdr();
+  if(!window.html2canvas||!window.jspdf){
+    setTimeout(()=>window.print(),200);
+    editando=prev;
+    return;
+  }
+  st.textContent="Gerando PDF...";
+  finalBtn.disabled=1;
+  try{
+    const canvas=await html2canvas($("#cat"),{scale:2,useCORS:true,allowTaint:true,backgroundColor:"#ffffff"});
+    const jsPDF=(window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
+    const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+    const pageW=210,pageH=297;
+    const imgH=canvas.height*pageW/canvas.width;
+    const img=canvas.toDataURL("image/jpeg",0.92);
+    let y=0,first=true;
+    while(y<imgH-0.5){
+      if(!first)pdf.addPage();
+      first=false;
+      pdf.addImage(img,"JPEG",0,-y,pageW,imgH);
+      y+=pageH;
+    }
+    const nome=($("#tit").value.trim()||"catalogo").replace(/[^\w\-]+/g,"_");
+    pdf.save(nome+".pdf");
+    st.textContent="PDF baixado.";
+  }catch(e){
+    st.textContent="Falha no PDF, abrindo impressao. "+(e.message||"");
+    window.print();
+  }
+  editando=prev;
+  rdr();
+  finalBtn.disabled=0;
+}
+finalBtn.addEventListener("click",gerarPdf);
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 }
