@@ -543,6 +543,12 @@ app.put("/api/catalog", auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+function saveImageBuffer(buf, ext) {
+  const name = Date.now() + "-" + crypto.randomBytes(6).toString("hex") + "." + ext;
+  fs.writeFileSync(path.join(UPLOAD_DIR, name), buf);
+  return "/uploads/" + name;
+}
+
 app.post("/api/upload", auth, (req, res) => {
   try {
     const dataUrl = String(req.body.image || req.body.dataUrl || "");
@@ -551,11 +557,44 @@ app.post("/api/upload", auth, (req, res) => {
     const ext = m[1].toLowerCase().includes("png") ? "png" : m[1].toLowerCase().includes("webp") ? "webp" : "jpg";
     const buf = Buffer.from(m[2], "base64");
     if (buf.length > 6 * 1024 * 1024) return res.status(400).json({ error: "Imagem muito grande." });
-    const name = Date.now() + "-" + crypto.randomBytes(6).toString("hex") + "." + ext;
-    fs.writeFileSync(path.join(UPLOAD_DIR, name), buf);
-    res.json({ url: "/uploads/" + name });
+    res.json({ url: saveImageBuffer(buf, ext) });
   } catch (e) {
     res.status(400).json({ error: "Falha ao salvar imagem." });
+  }
+});
+
+app.post("/api/fetch-image", auth, async (req, res) => {
+  try {
+    const src = String(req.body.url || "").trim();
+    let parsed;
+    try { parsed = new URL(src); } catch (e) { return res.status(400).json({ error: "URL invalida." }); }
+    if (!/^https?:$/i.test(parsed.protocol)) return res.status(400).json({ error: "URL invalida." });
+    const host = parsed.hostname.toLowerCase();
+    if (host === "localhost" || host.endsWith(".local") || host === "127.0.0.1" || host === "::1") {
+      return res.status(400).json({ error: "URL nao permitida." });
+    }
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 12000);
+    const r = await fetch(src, {
+      signal: ctrl.signal,
+      redirect: "follow",
+      headers: { Accept: "image/*,*/*;q=0.8", "User-Agent": "CatalogoOfertas/1.0" }
+    });
+    clearTimeout(t);
+    if (!r.ok) return res.status(400).json({ error: "Nao foi possivel baixar a imagem." });
+    const ctype = String(r.headers.get("content-type") || "").toLowerCase();
+    if (ctype && !ctype.startsWith("image/") && !ctype.includes("octet-stream")) {
+      return res.status(400).json({ error: "Arquivo nao e imagem." });
+    }
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (!buf.length || buf.length > 6 * 1024 * 1024) return res.status(400).json({ error: "Imagem invalida ou muito grande." });
+    let ext = "jpg";
+    if (ctype.includes("png") || src.toLowerCase().includes(".png")) ext = "png";
+    else if (ctype.includes("webp") || src.toLowerCase().includes(".webp")) ext = "webp";
+    else if (ctype.includes("jpeg") || ctype.includes("jpg")) ext = "jpg";
+    res.json({ url: saveImageBuffer(buf, ext) });
+  } catch (e) {
+    res.status(400).json({ error: "Falha ao copiar imagem." });
   }
 });
 

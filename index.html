@@ -733,18 +733,32 @@ async function bc(p){
   }
   return"";
 }
+async function copiarImagem(url){
+  if(!url)return"";
+  if(String(url).startsWith("/uploads/")||String(url).startsWith("data:"))return url;
+  try{
+    const up=await api("/api/fetch-image",{method:"POST",body:JSON.stringify({url})});
+    return up.url||url;
+  }catch(e){return url}
+}
 async function lc2(p){
   p.estado="buscando";
   rdr();
+  let found="";
   if(p.codigo&&p.codigo!=="000"){
     const d="https://wilso.agilecdn.com.br/"+encodeURIComponent(p.codigo)+".jpg";
-    if(await ti(d)){p.imagem=d;p.estado="encontrada";rdr();return 1}
+    if(await ti(d))found=d;
   }
-  const e=await bc(p);
-  p.imagem=e;
-  p.estado=e?"encontrada":"ausente";
+  if(!found)found=await bc(p);
+  if(found){
+    p.imagem=await copiarImagem(found);
+    p.estado="encontrada";
+  }else{
+    p.imagem="";
+    p.estado="ausente";
+  }
   rdr();
-  return!!e;
+  return!!found;
 }
 async function bt(){
   bus.disabled=1;
@@ -793,7 +807,11 @@ window.ai=async id=>{
   const u=v.trim();
   if(!u){p.imagem="";p.estado="ausente";rdr();return}
   st.textContent="Verificando imagem...";
-  if(await ti(u)){p.imagem=u;p.estado="encontrada";st.textContent="Imagem atualizada."}
+  if(await ti(u)){
+    p.imagem=await copiarImagem(u);
+    p.estado="encontrada";
+    st.textContent="Imagem atualizada.";
+  }
   else alert("Nao carregou.");
   rdr();
   agendarSalvar();
@@ -1206,22 +1224,43 @@ $("#docDel").addEventListener("click",async()=>{
   }catch(e){st.textContent=e.message}
 });
 bus.addEventListener("click",bt);
+async function garantirImagensLocais(){
+  let n=0;
+  for(const p of prods){
+    const img=String(p.imagem||"");
+    if(!img||img.startsWith("/uploads/")||img.startsWith("data:"))continue;
+    st.textContent="Copiando imagem "+(++n)+" para o PDF...";
+    p.imagem=await copiarImagem(img);
+  }
+  if(n)agendarSalvar();
+}
+function esperarImagens(){
+  const imgs=[...document.querySelectorAll("#cat img")];
+  return Promise.all(imgs.map(im=>im.complete?Promise.resolve():new Promise(r=>{
+    im.onload=()=>r();
+    im.onerror=()=>r();
+    setTimeout(r,4000);
+  })));
+}
 async function gerarPdf(){
   if(!prods.length){st.textContent="Adicione produtos antes de gerar o PDF.";return}
   $("#titS").textContent=$("#tit").value.trim()||"OFERTAS";
   $("#perS").textContent=$("#per").value.trim();
   const prev=editando;
   editando=false;
+  finalBtn.disabled=1;
+  try{await garantirImagensLocais()}catch(e){}
   rdr();
+  await esperarImagens();
   if(!window.html2canvas||!window.jspdf){
     setTimeout(()=>window.print(),200);
     editando=prev;
+    finalBtn.disabled=0;
     return;
   }
   st.textContent="Gerando PDF...";
-  finalBtn.disabled=1;
   try{
-    const canvas=await html2canvas($("#cat"),{scale:2,useCORS:true,allowTaint:true,backgroundColor:"#ffffff"});
+    const canvas=await html2canvas($("#cat"),{scale:2,useCORS:true,backgroundColor:"#ffffff"});
     const jsPDF=(window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
     const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
     const pageW=210,pageH=297;
