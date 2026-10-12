@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Catálogo Ofertas</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a5e24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Catalogo">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css?v=7">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+<div class="login" id="login">
+  <form class="box" id="loginForm">
+    <h1>Acesso ao catálogo</h1>
+    <p>Entre com usuário ou e-mail e senha.</p>
+    <label for="lu">Usuário ou e-mail</label>
+    <input id="lu" autocomplete="username" required>
+    <label for="lp">Senha</label>
+    <input id="lp" type="password" autocomplete="current-password" required>
+    <div class="err" id="le"></div>
+    <button class="bt p" type="submit" style="width:100%;margin-top:8px">Entrar</button>
+    <button class="link" id="goReset" type="button">Esqueci a senha</button>
+    <button class="link" id="goReg" type="button">Criar conta</button>
+  </form>
+  <form class="box" id="regForm" hidden>
+    <h1>Criar conta</h1>
+    <p>Cadastre usuário, e-mail e senha para usar o catálogo.</p>
+    <label for="ru">Usuário</label>
+    <input id="ru" required>
+    <label for="re">E-mail</label>
+    <input id="re" type="email" required>
+    <label for="rp">Senha</label>
+    <input id="rp" type="password" minlength="8" required>
+    <div class="err" id="rerr"></div>
+    <button class="bt p" type="submit" style="width:100%;margin-top:8px">Cadastrar</button>
+    <button class="link" id="backLogin3" type="button">Voltar ao login</button>
+  </form>
+  <form class="box" id="forgotForm" hidden>
+    <h1>Esqueci a senha</h1>
+    <p id="forgotHint">Informe o e-mail cadastrado. Enviaremos um link para renovar a senha.</p>
+    <label for="fe">E-mail</label>
+    <input id="fe" type="email" autocomplete="email" required>
+    <div class="err" id="fer"></div>
+    <div class="ok" id="fok"></div>
+    <button class="bt p" type="submit" style="width:100%;margin-top:8px">Enviar link</button>
+    <button class="link" id="backLogin1" type="button">Voltar ao login</button>
+  </form>
+  <form class="box" id="resetForm" hidden>
+    <h1>Nova senha</h1>
+    <p>Defina uma nova senha para a conta (mínimo 8 caracteres).</p>
+    <label for="np1">Nova senha</label>
+    <input id="np1" type="password" minlength="8" required>
+    <label for="np2">Confirmar senha</label>
+    <input id="np2" type="password" minlength="8" required>
+    <div class="err" id="rer"></div>
+    <button class="bt p" type="submit" style="width:100%;margin-top:8px">Salvar senha</button>
+    <button class="link" id="backLogin2" type="button">Voltar ao login</button>
+  </form>
+</div>
+
+<header class="topbar" id="topbar">
+  <div class="brand">Catálogo Ofertas</div>
+  <div class="nav">
+    <button class="tab on" id="tabCat" type="button">Catálogo</button>
+    <button class="tab" id="tabAdm" type="button" hidden>Admin</button>
+    <button class="tab" id="tabLay" type="button">Layout</button>
+    <button class="tab" id="tabConta" type="button">Conta</button>
+    <span class="who" id="who"></span>
+    <button class="tab" id="sair" type="button">Sair</button>
+  </div>
+</header>
+
+<div class="app" id="app">
+<section class="pnl">
+<h1>Gerador de Catálogo de Ofertas</h1>
+<p>Digite os produtos, ou suba um PDF/imagem da tabela. O app usa o preço UNIT e ignora EMBAL e MASTER. Sem código, grava 000.</p>
+<div class="docs">
+<select id="docSel"></select>
+<button id="docNew" class="bt a" type="button">Novo</button>
+<button id="docDup" class="bt a" type="button">Duplicar</button>
+<button id="docDel" class="bt" type="button">Excluir</button>
+</div>
+<div class="ctrl">
+<input id="tit" class="cp" value="OFERTAS">
+<input id="per" class="cp" placeholder="Ex.: 06 a 12 de setembro">
+<button id="atu" class="bt a">Atualizar cabeçalho</button>
+<button id="bus" class="bt a" disabled>Buscar imagens</button>
+<button id="final" class="bt p" disabled>Gerar PDF final</button>
+<button id="btnLay" class="bt a" type="button">Trocar layout</button>
+</div>
+<div class="upz" id="upz">
+<b>Subir PDF ou imagem da tabela</b>
+<span>Arraste o arquivo aqui ou clique para selecionar. Colunas extras (EMBAL / MASTER) são ignoradas.</span>
+</div>
+<input id="arq" type="file" accept=".pdf,image/png,image/jpeg,image/jpg,image/webp,image/bmp" multiple hidden>
+<textarea id="inp" class="tx" placeholder="Ex.:&#10;1234; ARROZ TIO JOÃO 1KG; 4,99&#10;123 - agua pedra azul - 1,95&#10;123 agua pedra azul 1,95&#10;1886 ACUCAR CRISTAL 2KG FD-15 6,49 97,35"></textarea>
+<button id="add" class="bt" style="margin-top:8px">Adicionar produtos</button>
+<div id="st">Digite os produtos, suba um PDF/imagem, e clique em "Adicionar".</div>
+<div class="nt">Formatos: codigo; nome; preco | codigo - nome - preco | tabela COD / DESCRICAO / EMBAL / UNIT / MASTER. Sem codigo = 000. Use "Alterar imagem" para subir manualmente.</div>
+</section>
+<main id="cat" class="cat">
+<div class="topo">
+<h2 id="titS">OFERTAS</h2>
+<div class="sub" id="perS"></div>
+</div>
+<div id="gr" class="gr edit-mode">
+<div class="vz"><strong>Nenhum produto adicionado</strong>Digite os itens e clique em "Adicionar".</div>
+</div>
+<div class="rodape">
+<span>*Imagens meramente ilustrativas</span>
+</div>
+</main>
+</div>
+
+<section class="admin-pnl" id="adminPnl">
+  <h2>Usuários e planos</h2>
+  <p>Crie acessos e defina o plano de cada conta. Gratuito: 1 catálogo e 12 produtos. Pro: ilimitado. O admin não pode ser removido.</p>
+  <div class="row">
+    <input id="nu" class="cp" placeholder="Novo usuário">
+    <input id="ne" class="cp" type="email" placeholder="E-mail">
+    <input id="np" class="cp" type="password" placeholder="Senha (mín. 8)">
+    <select id="nplan" class="cp">
+      <option value="free">Plano gratuito</option>
+      <option value="pro">Plano Pro</option>
+    </select>
+    <button id="addUser" class="bt p" type="button">Adicionar usuário</button>
+  </div>
+  <div id="admSt" style="font-size:13px;color:#37505f;margin-bottom:8px"></div>
+  <table>
+    <thead><tr><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Plano</th><th></th></tr></thead>
+    <tbody id="ulist"></tbody>
+  </table>
+</section>
+
+<section class="conta-pnl" id="contaPnl">
+  <h2>Conta</h2>
+  <div class="plan-box">
+    <p id="planInfo">Plano atual: gratuito.</p>
+    <ul>
+      <li>Gratuito: 1 catálogo e até 12 produtos.</li>
+      <li>Pro: catálogos e produtos ilimitados.</li>
+    </ul>
+  </div>
+  <button id="payBtn" class="bt p" type="button">Assinar plano Pro</button>
+  <h2 style="margin-top:22px">Alterar senha</h2>
+  <p>Informe a senha atual e a nova senha (mínimo 8 caracteres).</p>
+  <label for="senAtu">Senha atual</label>
+  <input id="senAtu" class="cp" type="password" style="width:100%;max-width:360px">
+  <label for="senNova">Nova senha</label>
+  <input id="senNova" class="cp" type="password" minlength="8" style="width:100%;max-width:360px">
+  <label for="senConf">Confirmar nova senha</label>
+  <input id="senConf" class="cp" type="password" minlength="8" style="width:100%;max-width:360px">
+  <div id="contaSt" style="font-size:13px;color:#37505f;margin:10px 0"></div>
+  <button id="savePass" class="bt p" type="button">Salvar senha</button>
+</section>
+
+<div class="modal" id="layModal">
+  <div class="modal-box">
+    <h2>Escolha o layout do catálogo</h2>
+    <p>Selecione um modelo antes de montar. Você pode trocar depois.</p>
+    <div class="lay-grid">
+      <button class="lay-card" type="button" data-lay="semana">
+        <img src="layouts/semana.webp" alt="Ofertas da Semana">
+        <b>Semana</b>
+      </button>
+      <button class="lay-card" type="button" data-lay="food">
+        <img src="layouts/food.webp" alt="Food Service">
+        <b>Food</b>
+      </button>
+      <button class="lay-card" type="button" data-lay="pani">
+        <img src="layouts/panificacao.webp" alt="Sexta da Panificação">
+        <b>Panificação</b>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="imgModal">
+  <div class="modal-box img-box">
+    <h2>Alterar imagem</h2>
+    <p>Envie do aparelho ou busque na internet pelo nome do produto.</p>
+    <div class="acts">
+      <button class="bt p" id="imgFileBtn" type="button">Selecionar do aparelho</button>
+      <input id="imgQuery" placeholder="Nome do produto">
+      <button class="bt a" id="imgSearchBtn" type="button">Buscar na internet</button>
+      <div class="img-st" id="imgSt"></div>
+      <div class="img-grid" id="imgGrid"></div>
+      <button class="bt g" id="imgCancel" type="button">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="passModal">
+  <div class="modal-box">
+    <h2>Redefinir senha</h2>
+    <p id="passHint">Informe a nova senha (mínimo 8 caracteres).</p>
+    <input id="passNova" type="password" minlength="8" placeholder="Nova senha">
+    <input id="passConf" type="password" minlength="8" placeholder="Confirmar senha">
+    <div class="err" id="passErr"></div>
+    <div class="acts">
+      <button class="bt p" id="passSave" type="button">Salvar senha</button>
+      <button class="bt g" id="passCancel" type="button">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/parser.js?v=7"></script>
+<script src="/js/app.js?v=7"></script>
+</body>
+</html>

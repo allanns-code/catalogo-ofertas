@@ -104,6 +104,10 @@
 *.log
 **/logs/
 
+# App data
+/data/
+.monkeycode-tmp-files/
+
 # Environment and secrets
 **/.env
 **/.env.local
