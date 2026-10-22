@@ -15,7 +15,7 @@ const arq = $("#arq");
 
 const MIN_PASSWORD = 8;
 const FREE_MAX_PRODUCTS = 12;
-const CARDS_PER_PAGE = 9;
+const CARDS_PER_PAGE = 12;
 
 let currentUser = null;
 let billingReady = false;
@@ -1052,19 +1052,15 @@ async function incorporarImagens(root) {
 }
 function paginarProdutos(lista) {
   if (!lista.length) return [];
-  const pages = [lista.slice(0, CARDS_PER_PAGE)];
-  const resto = lista.slice(CARDS_PER_PAGE);
-  const extra = 12;
-  for (let i = 0; i < resto.length; i += extra) pages.push(resto.slice(i, i + extra));
+  const pages = [];
+  for (let i = 0; i < lista.length; i += CARDS_PER_PAGE) pages.push(lista.slice(i, i + CARDS_PER_PAGE));
   return pages;
 }
 function montarPaginaPdf(grupo, pageIndex, totalPages) {
   const page = document.createElement("div");
   const comTopo = pageIndex === 0;
   page.className = "pdf-page cat" + (comTopo ? "" : " no-topo") + (layoutAtual && LAYOUTS[layoutAtual] ? " " + LAYOUTS[layoutAtual].cls : "");
-  page.style.position = "fixed";
-  page.style.left = "-9999px";
-  page.style.top = "0";
+  page.style.cssText = "position:fixed;left:0;top:0;z-index:-1;pointer-events:none;";
   const topo = comTopo
     ? '<div class="topo"><h2>' + es($("#tit").value.trim() || "OFERTAS") + '</h2><div class="sub">' + es($("#per").value.trim()) + "</div></div>"
     : "";
@@ -1106,19 +1102,33 @@ async function gerarPdf() {
     const pageW = 210, pageH = 297;
     for (let i = 0; i < paginas.length; i++) {
       setStatus("Gerando PDF... pagina " + (i + 1) + "/" + paginas.length);
-      const canvas = await html2canvas(paginas[i], {
+      const el = paginas[i];
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
         allowTaint: false,
         backgroundColor: "#ffffff",
         logging: false,
         imageTimeout: 15000,
-        width: paginas[i].offsetWidth,
-        height: paginas[i].offsetHeight
+        width: w,
+        height: h,
+        windowWidth: w,
+        windowHeight: h,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0
       });
       const img = canvas.toDataURL("image/jpeg", 0.92);
       if (i) pdf.addPage();
-      pdf.addImage(img, "JPEG", 0, 0, pageW, pageH);
+      const ratio = canvas.width / canvas.height;
+      const pageRatio = pageW / pageH;
+      let drawW = pageW, drawH = pageH;
+      if (ratio > pageRatio) drawH = pageW / ratio;
+      else drawW = pageH * ratio;
+      pdf.addImage(img, "JPEG", (pageW - drawW) / 2, 0, drawW, drawH);
     }
     const nome = ($("#tit").value.trim() || "catalogo").replace(/[^\w\-]+/g, "_");
     pdf.save(nome + ".pdf");

@@ -116,13 +116,21 @@ body{margin:0;background:#e9edf0;font-family:Arial,sans-serif;color:#1d2a33}
 .cat.lay-pani .topo{background:linear-gradient(135deg,#1a1a1a,#000)}
 .cat.lay-pani .topo h2{font-family:"Permanent Marker",cursive;color:#fff;letter-spacing:0;text-transform:none;text-shadow:0 3px 8px #000}
 .cat.lay-pani .topo .sub{color:#eee}
-.pdf-page{width:210mm;height:297mm;min-height:297mm;background:#fff;display:flex;flex-direction:column;overflow:hidden;box-shadow:none}
-.pdf-page.cat{width:210mm;min-height:297mm;margin:0}
-.pdf-page .gr{flex:1;grid-template-columns:repeat(3,1fr);padding:5mm 6mm 4mm;gap:5mm}
-.pdf-page .img-a{height:44mm}
-.pdf-page .topo{padding:18mm 10mm 7mm}
-.pdf-page .topo h2{font-size:48px}
-.pdf-page.no-topo .gr{padding-top:10mm}
+.pdf-page{width:210mm;height:297mm;min-height:297mm;max-height:297mm;background:#fff;display:flex;flex-direction:column;overflow:hidden;box-shadow:none}
+.pdf-page.cat{width:210mm;height:297mm;min-height:297mm;max-height:297mm;margin:0}
+.pdf-page .gr{flex:1 1 auto;min-height:0;grid-template-columns:repeat(3,1fr)!important;grid-template-rows:repeat(4,1fr);padding:4mm 5mm 3mm;gap:3.5mm;align-content:stretch;align-items:stretch}
+.pdf-page .pr{height:100%;min-height:0;border-width:3px;border-radius:10px}
+.pdf-page .img-a{flex:1 1 auto;height:auto;min-height:0;padding:3mm}
+.pdf-page .inf{flex:0 0 auto;padding:2mm 3.5mm 0}
+.pdf-page .desc{min-height:0;font-size:11px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pdf-page .obs-exibir{font-size:10px;margin:1mm 3mm 1mm}
+.pdf-page .rod-p{padding:2.5mm 3mm;flex-shrink:0}
+.pdf-page .final-mode .pre-final{font-size:20px}
+.pdf-page .topo{padding:9mm 8mm 4mm;flex-shrink:0}
+.pdf-page .topo h2{font-size:36px}
+.pdf-page .topo .sub{font-size:14px}
+.pdf-page .rodape{flex-shrink:0;padding:2.5mm 8mm}
+.pdf-page.no-topo .gr{padding-top:6mm}
 @media(max-width:840px){
 .pnl{margin:8px;border-radius:10px}
 .cat:not(.pdf-page){width:100%;min-height:auto;border-radius:0}
@@ -130,6 +138,10 @@ body{margin:0;background:#e9edf0;font-family:Arial,sans-serif;color:#1d2a33}
 .img-a{height:150px}
 .topo{padding:25px 15px 10px}
 .topo h2{font-size:32px}
+.pdf-page .gr{grid-template-columns:repeat(3,1fr)!important;grid-template-rows:repeat(4,1fr);padding:4mm 5mm 3mm;gap:3.5mm}
+.pdf-page .img-a{flex:1 1 auto;height:auto;min-height:0}
+.pdf-page .topo{padding:9mm 8mm 4mm}
+.pdf-page .topo h2{font-size:36px}
 .topbar{padding:10px 10px 8px;flex-wrap:wrap;gap:8px}
 .topbar .nav{flex-wrap:wrap;width:100%;justify-content:flex-start}
 .topbar .tab{padding:10px 12px;font-size:13px;min-height:40px}
@@ -141,7 +153,7 @@ body{margin:0;background:#e9edf0;font-family:Arial,sans-serif;color:#1d2a33}
 .login input{height:46px;font-size:16px}
 .edit-mode .ed,.edit-mode .ex{font-size:12px;padding:8px 10px}
 }
-@media(max-width:500px){.gr{grid-template-columns:1fr}.topbar .brand{width:100%}.docs select{width:100%}}
+@media(max-width:500px){.gr{grid-template-columns:1fr}.pdf-page .gr{grid-template-columns:repeat(3,1fr)!important}.topbar .brand{width:100%}.docs select{width:100%}}
 @media print{
 @page{size:A4;margin:0}
 body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
