@@ -13,8 +13,8 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/app.css?v=11">
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css?v=15">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -74,7 +74,6 @@
   <div class="nav">
     <button class="tab on" id="tabCat" type="button">Catálogo</button>
     <button class="tab" id="tabAdm" type="button" hidden>Admin</button>
-    <button class="tab" id="tabLay" type="button">Layout</button>
     <button class="tab" id="tabConta" type="button">Conta</button>
     <span class="who" id="who"></span>
     <button class="tab" id="sair" type="button">Sair</button>
@@ -92,12 +91,17 @@
 <button id="docDel" class="bt" type="button">Excluir</button>
 </div>
 <div class="ctrl">
-<input id="tit" class="cp" value="OFERTAS">
+<input id="tit" class="cp" value="OFERTAS DA SEMANA">
 <input id="per" class="cp" placeholder="Ex.: 06 a 12 de setembro">
 <button id="atu" class="bt a">Atualizar cabeçalho</button>
 <button id="bus" class="bt a" disabled>Buscar imagens</button>
 <button id="final" class="bt p" disabled>Gerar PDF final</button>
-<button id="btnLay" class="bt a" type="button">Trocar layout</button>
+</div>
+<div class="grade-bar">
+  <span>Montagem</span>
+  <button id="g3" class="bt g on" type="button" data-grade="3x3">3x3</button>
+  <button id="g2" class="bt g" type="button" data-grade="2x2">2x2</button>
+  <button id="g1" class="bt g" type="button" data-grade="1x1">1x1</button>
 </div>
 <div class="upz" id="upz">
 <b>Subir PDF ou imagem da tabela</b>
@@ -109,12 +113,12 @@
 <div id="st">Digite os produtos, suba um PDF/imagem, e clique em "Adicionar".</div>
 <div class="nt">Formatos: codigo; nome; preco | codigo - nome - preco | tabela COD / DESCRICAO / EMBAL / UNIT / MASTER. Sem codigo = 000. Use "Alterar imagem" para subir manualmente.</div>
 </section>
-<main id="cat" class="cat">
+<main id="cat" class="cat lay-semana">
 <div class="topo">
-<h2 id="titS">OFERTAS</h2>
+<h2 id="titS">OFERTAS DA SEMANA</h2>
 <div class="sub" id="perS"></div>
 </div>
-<div id="gr" class="gr edit-mode">
+<div id="gr" class="gr edit-mode grid-3">
 <div class="vz"><strong>Nenhum produto adicionado</strong>Digite os itens e clique em "Adicionar".</div>
 </div>
 <div class="rodape">
@@ -165,27 +169,6 @@
   <button id="savePass" class="bt p" type="button">Salvar senha</button>
 </section>
 
-<div class="modal" id="layModal">
-  <div class="modal-box">
-    <h2>Escolha o layout do catálogo</h2>
-    <p>Selecione um modelo antes de montar. Você pode trocar depois.</p>
-    <div class="lay-grid">
-      <button class="lay-card" type="button" data-lay="semana">
-        <img src="layouts/semana.webp" alt="Ofertas da Semana">
-        <b>Semana</b>
-      </button>
-      <button class="lay-card" type="button" data-lay="food">
-        <img src="layouts/food.webp" alt="Food Service">
-        <b>Food</b>
-      </button>
-      <button class="lay-card" type="button" data-lay="pani">
-        <img src="layouts/panificacao.webp" alt="Sexta da Panificação">
-        <b>Panificação</b>
-      </button>
-    </div>
-  </div>
-</div>
-
 <div class="modal" id="imgModal">
   <div class="modal-box img-box">
     <h2>Alterar imagem</h2>
@@ -215,7 +198,7 @@
   </div>
 </div>
 
-<script src="/js/parser.js?v=11"></script>
-<script src="/js/app.js?v=11"></script>
+<script src="/js/parser.js?v=15"></script>
+<script src="/js/app.js?v=15"></script>
 </body>
 </html>

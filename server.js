@@ -144,6 +144,12 @@ function emailOk(v) {
 function isPro(user) {
   return !!user && (user.plan === "pro" || user.role === "admin");
 }
+function normalizeLayout(v) {
+  const raw = String(v || "semana:3x3");
+  const grade = raw.split(":")[1];
+  const ok = grade === "2x2" || grade === "1x1" || grade === "3x3" ? grade : "3x3";
+  return "semana:" + ok;
+}
 function planLimits(user) {
   if (isPro(user)) {
     return { plan: "pro", maxCatalogs: 0, maxProducts: 0 };
@@ -187,9 +193,9 @@ function docPublic(row) {
   return {
     id: row.id,
     name: row.name || row.title || "Catalogo",
-    title: row.title || "OFERTAS",
+    title: row.title || "OFERTAS DA SEMANA",
     period: row.period || "",
-    layout: row.layout || "",
+    layout: normalizeLayout(row.layout),
     products: parseProducts(row.products),
     updated_at: row.updated_at || ""
   };
@@ -518,9 +524,9 @@ app.post("/api/catalogs", auth, async (req, res) => {
     return res.status(403).json({ error: "Plano gratuito permite ate " + limits.maxProducts + " produtos. Assine o Pro." });
   }
   const name = String(req.body.name || "Novo catalogo").trim() || "Novo catalogo";
-  const title = String(req.body.title || "OFERTAS");
+  const title = String(req.body.title || "OFERTAS DA SEMANA");
   const period = String(req.body.period || "");
-  const layout = String(req.body.layout || "");
+  const layout = normalizeLayout(req.body.layout);
   const products = JSON.stringify(productsArr);
   const info = await db.prepare("INSERT INTO catalog_docs (user_id,name,title,period,layout,products,updated_at) VALUES (?,?,?,?,?,?,?)").run(
     req.user.id, name, title, period, layout, products, new Date().toISOString()
@@ -567,9 +573,9 @@ app.put("/api/catalogs/:id", auth, async (req, res) => {
     return res.status(403).json({ error: "Plano gratuito permite ate " + limits.maxProducts + " produtos. Assine o Pro." });
   }
   const name = String(req.body.name || row.name || row.title || "Catalogo");
-  const title = String(req.body.title || "OFERTAS");
+  const title = String(req.body.title || "OFERTAS DA SEMANA");
   const period = String(req.body.period || "");
-  const layout = String(req.body.layout || "");
+  const layout = normalizeLayout(req.body.layout);
   const products = JSON.stringify(productsArr);
   await db.prepare("UPDATE catalog_docs SET name=?, title=?, period=?, layout=?, products=?, updated_at=? WHERE id=?").run(
     name, title, period, layout, products, new Date().toISOString(), row.id
@@ -590,7 +596,7 @@ app.get("/api/catalog", auth, async (req, res) => {
   let row = await db.prepare("SELECT * FROM catalog_docs WHERE user_id=? ORDER BY id LIMIT 1").get(req.user.id);
   if (!row) {
     const info = await db.prepare("INSERT INTO catalog_docs (user_id,name,title,period,layout,products,updated_at) VALUES (?,?,?,?,?,?,?)").run(
-      req.user.id, "Meu catalogo", "OFERTAS", "", "", "[]", new Date().toISOString()
+      req.user.id, "Meu catalogo", "OFERTAS DA SEMANA", "", "semana:3x3", "[]", new Date().toISOString()
     );
     row = await db.prepare("SELECT * FROM catalog_docs WHERE id=?").get(info.lastInsertRowid);
   }
@@ -605,9 +611,9 @@ app.put("/api/catalog", auth, async (req, res) => {
     return res.status(403).json({ error: "Plano gratuito permite ate " + limits.maxProducts + " produtos. Assine o Pro." });
   }
   const name = String(req.body.name || (row && row.name) || req.body.title || "Meu catalogo");
-  const title = String(req.body.title || "OFERTAS");
+  const title = String(req.body.title || "OFERTAS DA SEMANA");
   const period = String(req.body.period || "");
-  const layout = String(req.body.layout || "");
+  const layout = normalizeLayout(req.body.layout);
   const products = JSON.stringify(productsArr);
   if (!row) {
     await db.prepare("INSERT INTO catalog_docs (user_id,name,title,period,layout,products,updated_at) VALUES (?,?,?,?,?,?,?)").run(

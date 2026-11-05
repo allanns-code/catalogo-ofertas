@@ -15,7 +15,12 @@ const arq = $("#arq");
 
 const MIN_PASSWORD = 8;
 const FREE_MAX_PRODUCTS = 12;
-const CARDS_PER_PAGE = 12;
+const GRADES = {
+  "3x3": { cls: "grid-3", perPage: 12 },
+  "2x2": { cls: "grid-2", perPage: 8 },
+  "1x1": { cls: "grid-1", perPage: 2 }
+};
+const GRADE_PADRAO = "3x3";
 
 let currentUser = null;
 let billingReady = false;
@@ -27,7 +32,7 @@ let planLimits = { plan: "free", maxCatalogs: 1, maxProducts: FREE_MAX_PRODUCTS 
 let prods = [];
 let editando = true;
 let idCounter = 0;
-let layoutAtual = "";
+let gradeAtual = GRADE_PADRAO;
 let imgTargetId = 0;
 let resetUserId = 0;
 let resetUserName = "";
@@ -94,32 +99,34 @@ async function renderUsers() {
   }
 }
 
+const LAYOUT_PADRAO = "semana";
 const LAYOUTS = {
-  semana: { cls: "lay-semana", titulo: "OFERTAS DA SEMANA" },
-  food: { cls: "lay-food", titulo: "OFERTAS FOOD SERVICE" },
-  pani: { cls: "lay-pani", titulo: "#SEXTA DA PANIFICACAO" }
+  semana: { cls: "lay-semana", titulo: "OFERTAS DA SEMANA" }
 };
 
 function aplicarLayout(id, forcarTitulo, semSalvar) {
-  const lay = LAYOUTS[id];
-  if (!lay) return;
-  layoutAtual = id;
+  const lay = LAYOUTS[LAYOUT_PADRAO];
   const catEl = $("#cat");
   catEl.classList.remove("lay-semana", "lay-food", "lay-pani");
   catEl.classList.add(lay.cls);
-  document.querySelectorAll(".lay-card").forEach(c => c.classList.toggle("on", c.dataset.lay === id));
-  if (forcarTitulo || !$("#tit").value || $("#tit").value === "OFERTAS") {
+  if (forcarTitulo || !$("#tit").value || $("#tit").value === "OFERTAS" || $("#tit").value === lay.titulo) {
     $("#tit").value = lay.titulo;
     $("#titS").textContent = lay.titulo;
   }
   rdr();
   if (!semSalvar) agendarSalvar();
 }
-function abrirLayoutModal() {
-  $("#layModal").classList.add("on");
+function normalizarGrade(id) {
+  return GRADES[id] ? id : GRADE_PADRAO;
 }
-function fecharLayoutModal() {
-  $("#layModal").classList.remove("on");
+function atualizarBotoesGrade() {
+  document.querySelectorAll("[data-grade]").forEach(b => b.classList.toggle("on", b.dataset.grade === gradeAtual));
+}
+function aplicarGrade(id, semSalvar) {
+  gradeAtual = normalizarGrade(id);
+  atualizarBotoesGrade();
+  rdr();
+  if (!semSalvar) agendarSalvar();
 }
 function esconderPaineis() {
   $("#app").style.display = "none";
@@ -217,13 +224,10 @@ on("#tabAdm", "click", () => {
   $("#tabAdm").classList.add("on");
   renderUsers();
 });
-on("#tabLay", "click", abrirLayoutModal);
-on("#btnLay", "click", abrirLayoutModal);
-document.querySelectorAll(".lay-card").forEach(card => {
-  card.addEventListener("click", () => {
-    aplicarLayout(card.dataset.lay, true);
-    fecharLayoutModal();
-  });
+on(".grade-bar", "click", e => {
+  const btn = e.target.closest("[data-grade]");
+  if (!btn) return;
+  aplicarGrade(btn.dataset.grade);
 });
 on("#tabConta", "click", () => {
   esconderPaineis();
@@ -391,9 +395,9 @@ function snapshotCatalogo() {
   const name = sel && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : ($("#tit").value.trim() || "Catalogo");
   return {
     name,
-    title: $("#tit").value.trim() || "OFERTAS",
+    title: $("#tit").value.trim() || LAYOUTS.semana.titulo,
     period: $("#per").value.trim(),
-    layout: layoutAtual || "",
+    layout: LAYOUT_PADRAO + ":" + gradeAtual,
     products: prods.map(p => ({
       id: p.id, codigo: p.codigo, descricao: p.descricao, embalagem: p.embalagem || "",
       preco: p.preco, imagem: p.imagem && (String(p.imagem).startsWith("http") || String(p.imagem).startsWith("/uploads/")) ? p.imagem : "",
@@ -411,7 +415,7 @@ async function listarDocs() {
   applyLimits(data);
   docsCache = data.catalogs || [];
   if (!docsCache.length) {
-    const created = await api("/api/catalogs", { method: "POST", body: JSON.stringify({ name: "Meu catalogo", title: "OFERTAS" }) });
+    const created = await api("/api/catalogs", { method: "POST", body: JSON.stringify({ name: "Meu catalogo", title: LAYOUTS.semana.titulo, layout: LAYOUT_PADRAO + ":" + gradeAtual }) });
     docsCache = [{ id: created.id, name: created.name, title: created.title }];
     currentDocId = created.id;
   }
@@ -420,7 +424,7 @@ async function listarDocs() {
 }
 function aplicarDoc(data) {
   currentDocId = data.id;
-  $("#tit").value = data.title || "OFERTAS";
+  $("#tit").value = data.title || LAYOUTS.semana.titulo;
   $("#per").value = data.period || "";
   $("#titS").textContent = $("#tit").value;
   $("#perS").textContent = $("#per").value;
@@ -428,11 +432,10 @@ function aplicarDoc(data) {
   idCounter = prods.reduce((m, p) => Math.max(m, Number(p.id) || 0), 0);
   bus.disabled = prods.length ? 0 : 1;
   finalBtn.disabled = prods.length ? 0 : 1;
-  layoutAtual = "";
-  const catEl = $("#cat");
-  catEl.classList.remove("lay-semana", "lay-food", "lay-pani");
-  if (data.layout && LAYOUTS[data.layout]) aplicarLayout(data.layout, false, true);
-  else rdr();
+  const parts = String(data.layout || "").split(":");
+  gradeAtual = normalizarGrade(parts[1] || GRADE_PADRAO);
+  atualizarBotoesGrade();
+  aplicarLayout(LAYOUT_PADRAO, false, true);
 }
 async function salvarAgora() {
   if (!currentUser || !currentDocId) return;
@@ -463,7 +466,6 @@ async function entrar(user) {
   } catch (e) {
     setStatus(e.message, "err");
   }
-  if (!layoutAtual) abrirLayoutModal();
 }
 async function boot() {
   const token = (location.hash.match(/reset=([a-f0-9]+)/i) || [])[1];
@@ -535,7 +537,8 @@ function cardHtml(p, modoEdit) {
 }
 function rdr() {
   const mc = editando ? "edit-mode" : "final-mode";
-  gr.className = "gr " + mc;
+  const g = GRADES[normalizarGrade(gradeAtual)];
+  gr.className = "gr " + mc + " " + g.cls;
   if (!prods.length) {
     gr.innerHTML = '<div class="vz"><strong>Nenhum produto adicionado</strong>Digite os itens e clique em "Adicionar".</div>';
     return;
@@ -941,7 +944,7 @@ on(arq, "change", () => {
   arq.value = "";
 });
 on("#atu", "click", () => {
-  $("#titS").textContent = $("#tit").value.trim() || "OFERTAS";
+  $("#titS").textContent = $("#tit").value.trim() || LAYOUTS.semana.titulo;
   $("#perS").textContent = $("#per").value.trim();
   agendarSalvar();
 });
@@ -958,10 +961,9 @@ on("#docNew", "click", async () => {
   if (!name) return;
   if (currentDocId) await salvarAgora();
   try {
-    const created = await api("/api/catalogs", { method: "POST", body: JSON.stringify({ name, title: "OFERTAS", layout: layoutAtual || "" }) });
+    const created = await api("/api/catalogs", { method: "POST", body: JSON.stringify({ name, title: LAYOUTS.semana.titulo, layout: LAYOUT_PADRAO + ":" + gradeAtual }) });
     await listarDocs();
     await carregarCatalogo(created.id);
-    abrirLayoutModal();
   } catch (e) {
     setStatus(e.message, "err");
   }
@@ -1052,28 +1054,30 @@ async function incorporarImagens(root) {
 }
 function paginarProdutos(lista) {
   if (!lista.length) return [];
+  const perPage = GRADES[normalizarGrade(gradeAtual)].perPage;
   const pages = [];
-  for (let i = 0; i < lista.length; i += CARDS_PER_PAGE) pages.push(lista.slice(i, i + CARDS_PER_PAGE));
+  for (let i = 0; i < lista.length; i += perPage) pages.push(lista.slice(i, i + perPage));
   return pages;
 }
 function montarPaginaPdf(grupo, pageIndex, totalPages) {
   const page = document.createElement("div");
   const comTopo = pageIndex === 0;
-  page.className = "pdf-page cat" + (comTopo ? "" : " no-topo") + (layoutAtual && LAYOUTS[layoutAtual] ? " " + LAYOUTS[layoutAtual].cls : "");
+  const g = GRADES[normalizarGrade(gradeAtual)];
+  page.className = "pdf-page cat" + (comTopo ? "" : " no-topo") + " " + LAYOUTS[LAYOUT_PADRAO].cls;
   page.style.cssText = "position:fixed;left:0;top:0;z-index:-1;pointer-events:none;";
   const topo = comTopo
-    ? '<div class="topo"><h2>' + es($("#tit").value.trim() || "OFERTAS") + '</h2><div class="sub">' + es($("#per").value.trim()) + "</div></div>"
+    ? '<div class="topo"><h2>' + es($("#tit").value.trim() || LAYOUTS.semana.titulo) + '</h2><div class="sub">' + es($("#per").value.trim()) + "</div></div>"
     : "";
   page.innerHTML =
     topo +
-    '<div class="gr final-mode">' + grupo.map(p => cardHtml(p, false)).join("") + "</div>" +
+    '<div class="gr final-mode ' + g.cls + '">' + grupo.map(p => cardHtml(p, false)).join("") + "</div>" +
     '<div class="rodape"><span>*Imagens meramente ilustrativas</span></div>';
   document.body.appendChild(page);
   return page;
 }
 async function gerarPdf() {
   if (!prods.length) { setStatus("Adicione produtos antes de gerar o PDF."); return; }
-  $("#titS").textContent = $("#tit").value.trim() || "OFERTAS";
+  $("#titS").textContent = $("#tit").value.trim() || LAYOUTS.semana.titulo;
   $("#perS").textContent = $("#per").value.trim();
   finalBtn.disabled = 1;
   try { await garantirImagensLocais(); } catch (e) {}
